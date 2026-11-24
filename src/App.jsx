@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowUpRight, Github, Linkedin, Mail, Menu, X, Code2, Braces, Database, Globe, Send, CheckCircle2 } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const CONTACT_ENDPOINT = "https://formsubmit.co/ajax/deepak.p.1850@gmail.com";
 
 const skills = [
   { name: "HTML5", detail: "Semantic structure & accessible layouts", icon: Globe, level: "Learning & building", width: "78%" },
@@ -32,7 +33,7 @@ function App() {
   const [projects, setProjects] = useState(fallbackProjects);
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [sending, setSending] = useState(false);
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState({ message: "", isError: false });
 
   useEffect(() => {
     fetch(`${API}/api/projects`)
@@ -47,19 +48,30 @@ function App() {
   async function submitContact(event) {
     event.preventDefault();
     setSending(true);
-    setNotice("");
+    setNotice({ message: "", isError: false });
     try {
-      const response = await fetch(`${API}/api/contact`, {
+      const response = await fetch(CONTACT_ENDPOINT, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify({
+          ...form,
+          _subject: "New message from your portfolio"
+        })
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Could not send message.");
-      setNotice("Thanks! Your message has been sent.");
+      const data = await response.json().catch(() => null);
+      if (!response.ok || (data?.success !== "true" && data?.success !== true)) {
+        throw new Error(data?.message || "Could not send message. Please try again.");
+      }
+      setNotice({ message: "Thanks! Your message has been sent.", isError: false });
       setForm({ name: "", email: "", message: "" });
     } catch (error) {
-      setNotice(`${error.message} Make sure the backend and MongoDB are running.`);
+      setNotice({
+        message: error.message || "Could not send message. Please try again.",
+        isError: true
+      });
     } finally {
       setSending(false);
     }
@@ -140,7 +152,7 @@ function App() {
 
         <section className="contact section" id="contact"><div className="wrap contact-grid">
           <div><p className="kicker">04 / GET IN TOUCH</p><h2>Have an idea?<br/><span>Let's build it.</span></h2><p className="contact-desc">I'm open to internships, learning opportunities and collaborations. Send me a message.</p>
-            <div className="direct-links"><a href="mailto:dipak968043@gmail.com"><Mail size={17}/> dipak968043@gmail.com</a><a href="tel:+919936241650">☎ +91 99362 41650</a></div>
+            <div className="direct-links"><a href="mailto:deepak.p.1850@gmail.com"><Mail size={17}/> deepak.p.1850@gmail.com</a><a href="tel:+919936241650">☎ +91 99362 41650</a></div>
             <div className="socials"><a href="https://github.com/deepakprajapati9936" target="_blank" rel="noreferrer"><Github size={17}/> GitHub</a><a href="https://www.linkedin.com/in/dipak-prajapati-6b4181404/" target="_blank" rel="noreferrer"><Linkedin size={17}/> LinkedIn</a></div>
           </div>
           <form className="contact-form" onSubmit={submitContact}>
@@ -148,7 +160,7 @@ function App() {
             <label>Email address<input type="email" name="email" value={form.email} onChange={updateForm} placeholder="you@example.com" required/></label>
             <label>Message<textarea name="message" value={form.message} onChange={updateForm} placeholder="Tell me about your idea..." rows="4" required minLength="10"/></label>
             <button className="btn primary send-btn" disabled={sending}>{sending ? "Sending..." : "Send message"} <Send size={15}/></button>
-            {notice && <p className="form-notice"><CheckCircle2 size={15}/>{notice}</p>}
+            {notice.message && <p className="form-notice" role={notice.isError ? "alert" : "status"}>{notice.isError ? <X size={15}/> : <CheckCircle2 size={15}/>} {notice.message}</p>}
           </form>
         </div></section>
       </main>
